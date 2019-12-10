@@ -14,6 +14,9 @@ async function main() {
 		where: {name: 'Bob'}
 	});
 	console.log(another);
+
+	const postsByUser = await prisma.user({email: 'bob@test.com'}).posts();
+	console.log(`All posts by that user:${JSON.stringify(postsByUser)}`);
 };
 
 main().catch(console.error);

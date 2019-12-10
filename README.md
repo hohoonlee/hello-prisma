@@ -1,7 +1,10 @@
 # hello-prisma
-- Prisma가 뭔지 알기 위해 진행하며 적은 문서
-- 지금까지 해본 결과 DB를 Wrapping하는 GraphQL Server를 제공하는 Service로 판단됨.
-- ORM용 파일까지 자동 생성 기능.
+- 전통적인 ORM과 간단한 DB 작업의 대체물
+	- client 자동 생성
+	- data migration.
+	- 관리툴
+- MySQL, PostgreSQL, MongoDB 지원.
+- Client -> Application / API Server -> Data Access Layer (Prisma) -> Database
 
 1. Prisma CLI 설치
 > npm install -g prisma
@@ -109,5 +112,74 @@ async function main() {
 };
 
 main().catch(console.error);
+```
+> node find.js
+
+21. model 변경 (datamode.prisma)
+```
+type User {
+  id: ID! @id
+  email: String @unique
+  name: String!
+  posts: [Post!]!
+}
+
+type Post {
+  id: ID! @id
+  title: String!
+  published: Boolean! @default(value: false)
+  author: User @relation(link: INLINE)
+}
+```
+> prisma deploy
+> prisma generate
+* data가 삭제되지 않네요.
+
+22. 자동 generate (prisma.yml 수정)
+```
+hooks:
+	post-deploy:
+		- prisma generate
+```
+
+23. createNewUser.js 작성
+```
+const { prisma } = require('./generated/prisma-client')
+
+// A `main` function so that we can use async/await
+async function main() {
+  // Create a new user with a new post
+  const newUser = await prisma.createUser({
+    name: 'Bob',
+    email: 'bob@prisma.io',
+    posts: {
+      create: [
+        {
+          title: 'Join us for GraphQL Conf in 2019',
+        },
+        {
+          title: 'Subscribe to GraphQL Weekly for GraphQL news',
+        },
+      ],
+    },
+  })
+  console.log(`Created new user: ${newUser.name} (ID: ${newUser.id})`)
+
+  // Read all users from the database and print them to the console
+  const allUsers = await prisma.users()
+  console.log(allUsers)
+
+  const allPosts = await prisma.posts()
+  console.log(allPosts)
+}
+
+main().catch(e => console.error(e))
+```
+> node createNewUser.js
+
+24. 관계 쿼리 (find.js 수정)
+```
+	const postsByUser = await prisma.user({email: 'bob@test.com'}).posts();
+	console.log(`All posts by that user:${JSON.stringfy(postsByUser)}`);
 ```
 > node find.js
